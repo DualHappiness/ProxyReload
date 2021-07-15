@@ -1,0 +1,23 @@
+{
+  "name": "proxyreload",
+  "version": "1.0.0",
+  "description": "A simple nodejs live-reload module using Proxy",
+  "main": "src/index.js",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/DualHappiness/ProxyReload.git"
+  },
+  "keywords": [
+    "live-reload",
+    "proxy"
+  ],
+  "author": "Dual Wu <dualwu_tech@outlook.com>",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/DualHappiness/ProxyReload/issues"
+  },
+  "homepage": "https://github.com/DualHappiness/ProxyReload#readme",
+  "devDependencies": {
+    "@types/node": "^16.3.2"
+  }
+}

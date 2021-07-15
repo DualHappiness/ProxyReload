@@ -1,0 +1,14 @@
+{
+    "compilerOptions": {
+        "target": "ESNext",
+        "module": "CommonJS",
+        "moduleResolution": "Node",
+        "declaration": true,
+        "sourceMap": true,
+        "outDir": "./src",
+        "typeRoots": [
+            "./node_modules/@types"
+        ],
+        "declarationDir": "src/types"
+    }
+}
