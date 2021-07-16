@@ -1,5 +1,5 @@
 export declare const a: {
     b: number;
-    c: () => void;
+    c: (count: number) => void;
     d: number[];
 };

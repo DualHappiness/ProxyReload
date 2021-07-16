@@ -14,7 +14,7 @@ const warp_target = function (child, parent) {
         case 'function': {
             // differ class and normal function
             // not only constructor
-            if (!child.prototype || Object.keys(child.prototype).length === 1) {
+            if (!child.prototype || Object.getOwnPropertyNames(child.prototype).length === 1) {
                 child = child.bind(parent);
             }
             break;
@@ -67,14 +67,7 @@ class ReloadHandler {
     }
     get(_target, prop, receiver) {
         const { uid, path, cur } = this;
-        // hook
-        if (prop === '__handler_cur') {
-            return cur;
-        }
-        if (cur === undefined || cur === null) {
-            return undefined;
-        }
-        if (Reflect.has(cur, prop)) {
+        if (cur && Reflect.has(cur, prop)) {
             const child_path = `${path}/${prop}`;
             if (!(child_path in handler_map[uid])) {
                 const child = warp_target(Reflect.get(cur, prop), receiver);
@@ -82,6 +75,10 @@ class ReloadHandler {
                 handler_map[uid][child_path] = handler;
             }
             return new Proxy(place_holder, handler_map[uid][child_path]);
+        }
+        // hook
+        if (prop === '__handler_cur') {
+            return cur;
         }
         return undefined;
     }
