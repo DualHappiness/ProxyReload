@@ -1,5 +1,7 @@
 import { reload } from '..'; // * 最先加载用来替换require实现热更
+// const reload = undefined;
 import { writeFileSync, mkdirSync, rmSync } from 'fs';
+import '../test/test'; // test reletive
 
 const dir_path = `${__dirname}/temp`;
 mkdirSync(dir_path, { recursive: true });
@@ -15,8 +17,10 @@ writeFileSync(
         d: [1, 2, 3] \
     };\
     exports.A = class { \
+        i = 1; \
         print() { \
-            console.log(1); \
+            this.i += 1; \
+            console.log(this.i); \
         } \
     };\
     "
@@ -25,14 +29,14 @@ const root = require(path);
 const obj = root.obj;
 const b = obj.b;
 const d2 = obj.d[2];
-// const a = new root.A();
+const a = new root.A();
 const print_result = () => {
     console.log(`${Object.keys(obj)}`);
     console.log(`${Object.values(obj)}`);
     console.log(`${obj.c(2)}`);
     console.log(`b + '1111': ${b + '1111'}`);
     console.log(`d2: ${d2}`);
-    // console.log(`a: print ${a.print()}`);
+    console.log(`a: print ${a.print()}`);
 }
 print_result();
 writeFileSync(
@@ -51,6 +55,6 @@ writeFileSync(
     };\
     "
 )
-reload(path);
+if (reload) reload(path);
 print_result();
 rmSync(dir_path, { recursive: true, force: true });

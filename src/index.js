@@ -2,13 +2,23 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.reload = void 0;
 const module_1 = require("module");
+const types_1 = require("util/types");
+// TODO 区分 lambda 和 function
 const handler_map = {};
-const place_holder = () => { };
+const place_holder = function () { };
 const warp_target = function (child, parent) {
+    if (types_1.isProxy(parent)) {
+        parent = parent.__handler_cur;
+    }
     switch (typeof child) {
-        case 'function':
-            child = child.bind(parent);
+        case 'function': {
+            // differ class and normal function
+            // not only constructor
+            if (!child.prototype || Object.keys(child.prototype).length === 1) {
+                child = child.bind(parent);
+            }
             break;
+        }
         case 'number':
             child = new Number(child);
             break;
@@ -21,48 +31,68 @@ const warp_target = function (child, parent) {
     }
     return child;
 };
+const specail_prop = ['constructor'];
 class ReloadHandler {
-    constructor(id, path, cur) {
-        this.id = id;
+    constructor(uid, path, cur) {
+        this.uid = uid;
         this.path = path;
         this.cur = cur;
+    }
+    has(_target, key) {
+        return key in this.cur;
     }
     // set update exist proxy
     set(_target, prop, value) {
         const ret = Reflect.set(this.cur, prop, value);
         const child_path = `${this.path}/${prop}`;
         value = warp_target(value, this.cur);
-        if (child_path in handler_map[this.id]) {
-            handler_map[this.id][child_path].cur = value;
+        if (child_path in handler_map[this.uid]) {
+            handler_map[this.uid][child_path].cur = value;
         }
         return ret;
     }
-    // TODO class support
-    // constructor()
+    construct(_target, argumentsList) {
+        const { uid, path, cur } = this;
+        const ret = new cur(...argumentsList);
+        const child_path = `${path}/prototype`;
+        if (!(child_path in handler_map)) {
+            const handler = new ReloadHandler(uid, child_path, cur.prototype);
+            handler_map[uid][child_path] = handler;
+        }
+        ret.__proto__ = new Proxy(place_holder, handler_map[uid][child_path]);
+        return ret;
+    }
     apply(_target, _thisArg, argumentsList) {
         return this.cur(...argumentsList);
     }
-    get(_target, prop, _receiver) {
-        const { id, path, cur } = this;
+    get(_target, prop, receiver) {
+        const { uid, path, cur } = this;
+        // hook
+        if (prop === '__handler_cur') {
+            return cur;
+        }
         if (cur === undefined || cur === null) {
             return undefined;
         }
-        if (prop in cur) {
+        if (Reflect.has(cur, prop)) {
             const child_path = `${path}/${prop}`;
-            if (!(child_path in handler_map[id])) {
-                const child = warp_target(cur[prop], cur);
-                const handler = new ReloadHandler(id, child_path, child);
-                handler_map[id][child_path] = handler;
+            if (!(child_path in handler_map[uid])) {
+                const child = warp_target(Reflect.get(cur, prop), receiver);
+                const handler = new ReloadHandler(uid, child_path, child);
+                handler_map[uid][child_path] = handler;
             }
-            return new Proxy(place_holder, handler_map[id][child_path]);
+            return new Proxy(place_holder, handler_map[uid][child_path]);
         }
         return undefined;
     }
     ;
 }
 const node_require = module_1.Module.prototype.require;
+const resolve = module.constructor._resolveFilename;
 const reload_require = function (id) {
-    const uid = require.resolve.apply(this, [id]);
+    // this is the Module object
+    // get unique id for a file as uid
+    const uid = resolve(id, this, false);
     if (!(uid in handler_map)) {
         const raw = node_require.apply(this, [uid]);
         const handler = new ReloadHandler(uid, '', raw);
@@ -75,6 +105,7 @@ for (const key in require) {
 }
 module_1.Module.prototype.require = reload_require;
 global.require = reload_require;
+// ! 现在智能通过全路劲更新 或者 是相对于本文件的路径  但还不如全路劲呢
 function reload(id) {
     const uid = require.resolve(id);
     const _old = require.cache[uid];
@@ -83,7 +114,9 @@ function reload(id) {
     // TODO migrate
     for (const path in handler_map[uid]) {
         let temp = ret, parent;
-        path.split('/').slice(1).forEach(p => {
+        path.split('/').slice(1)
+            .filter(prop => !specail_prop.includes(prop))
+            .forEach(p => {
             parent = temp;
             temp = temp ? temp[p] : undefined;
         });

@@ -1,7 +1,9 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const __1 = require(".."); // * 最先加载用来替换require实现热更
+// const reload = undefined;
 const fs_1 = require("fs");
+require("../test/test"); // test reletive
 const dir_path = `${__dirname}/temp`;
 fs_1.mkdirSync(dir_path, { recursive: true });
 const filename = 'example1_test.js';
@@ -14,8 +16,10 @@ fs_1.writeFileSync(path, " \
         d: [1, 2, 3] \
     };\
     exports.A = class { \
+        i = 1; \
         print() { \
-            console.log(1); \
+            this.i += 1; \
+            console.log(this.i); \
         } \
     };\
     ");
@@ -23,14 +27,14 @@ const root = require(path);
 const obj = root.obj;
 const b = obj.b;
 const d2 = obj.d[2];
-// const a = new root.A();
+const a = new root.A();
 const print_result = () => {
     console.log(`${Object.keys(obj)}`);
     console.log(`${Object.values(obj)}`);
     console.log(`${obj.c(2)}`);
     console.log(`b + '1111': ${b + '1111'}`);
     console.log(`d2: ${d2}`);
-    // console.log(`a: print ${a.print()}`);
+    console.log(`a: print ${a.print()}`);
 };
 print_result();
 fs_1.writeFileSync(path, " \
@@ -46,7 +50,8 @@ fs_1.writeFileSync(path, " \
         } \
     };\
     ");
-__1.reload(path);
+if (__1.reload)
+    __1.reload(path);
 print_result();
 fs_1.rmSync(dir_path, { recursive: true, force: true });
 //# sourceMappingURL=example1.js.map
