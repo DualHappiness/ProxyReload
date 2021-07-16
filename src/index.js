@@ -1,6 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.reload = void 0;
+const module_1 = require("module");
 const handler_map = {};
 const place_holder = () => { };
 const warp_target = function (child, parent) {
@@ -57,10 +58,10 @@ class ReloadHandler {
     }
     ;
 }
-const node_require = require;
+const node_require = module_1.Module.prototype.require;
 const reload_require = function (id) {
     if (!(id in handler_map)) {
-        const raw = node_require(id);
+        const raw = node_require.apply(this, [id]);
         const handler = new ReloadHandler(id, '', raw);
         handler_map[id] = { '': handler };
     }
@@ -69,10 +70,12 @@ const reload_require = function (id) {
 for (const key in require) {
     reload_require[key] = require[key];
 }
+module_1.Module.prototype.require = reload_require;
 global.require = reload_require;
 function reload(id) {
-    const _old = require.cache[require.resolve(id)];
-    delete require.cache[require.resolve(id)];
+    const uid = require.resolve(id);
+    const _old = require.cache[uid];
+    delete require.cache[uid];
     const ret = node_require(id);
     // TODO migrate
     for (const path in handler_map[id]) {

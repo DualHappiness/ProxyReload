@@ -1,3 +1,5 @@
+import { Module } from "module";
+
 const handler_map: { [id: string]: { [path: string]: ReloadHandler } } = {};
 const place_holder = () => { };
 
@@ -49,10 +51,10 @@ class ReloadHandler {
         return undefined;
     };
 }
-const node_require = require;
+const node_require = Module.prototype.require;
 const reload_require = function (id: string): any {
     if (!(id in handler_map)) {
-        const raw = node_require(id);
+        const raw = node_require.apply(this, [id]);
         const handler = new ReloadHandler(id, '', raw);
         handler_map[id] = { '': handler };
     }
@@ -61,11 +63,13 @@ const reload_require = function (id: string): any {
 for (const key in require) {
     reload_require[key] = require[key];
 }
+Module.prototype.require = reload_require as NodeRequire;
 global.require = reload_require as NodeRequire;
 
 export function reload(id: string): any {
-    const _old = require.cache[require.resolve(id)];
-    delete require.cache[require.resolve(id)];
+    const uid = require.resolve(id);
+    const _old = require.cache[uid];
+    delete require.cache[uid];
     const ret = node_require(id);
     // TODO migrate
 
