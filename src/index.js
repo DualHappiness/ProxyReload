@@ -37,6 +37,8 @@ class ReloadHandler {
         }
         return ret;
     }
+    // TODO class support
+    // constructor()
     apply(_target, _thisArg, argumentsList) {
         return this.cur(...argumentsList);
     }
@@ -60,12 +62,13 @@ class ReloadHandler {
 }
 const node_require = module_1.Module.prototype.require;
 const reload_require = function (id) {
-    if (!(id in handler_map)) {
-        const raw = node_require.apply(this, [id]);
-        const handler = new ReloadHandler(id, '', raw);
-        handler_map[id] = { '': handler };
+    const uid = require.resolve.apply(this, [id]);
+    if (!(uid in handler_map)) {
+        const raw = node_require.apply(this, [uid]);
+        const handler = new ReloadHandler(uid, '', raw);
+        handler_map[uid] = { '': handler };
     }
-    return new Proxy(place_holder, handler_map[id]['']);
+    return new Proxy(place_holder, handler_map[uid]['']);
 };
 for (const key in require) {
     reload_require[key] = require[key];
@@ -76,16 +79,16 @@ function reload(id) {
     const uid = require.resolve(id);
     const _old = require.cache[uid];
     delete require.cache[uid];
-    const ret = node_require(id);
+    const ret = node_require(uid);
     // TODO migrate
-    for (const path in handler_map[id]) {
+    for (const path in handler_map[uid]) {
         let temp = ret, parent;
         path.split('/').slice(1).forEach(p => {
             parent = temp;
             temp = temp ? temp[p] : undefined;
         });
         temp = warp_target(temp, parent);
-        handler_map[id][path].cur = temp;
+        handler_map[uid][path].cur = temp;
     }
 }
 exports.reload = reload;
